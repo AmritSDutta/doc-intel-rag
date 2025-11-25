@@ -1,0 +1,16 @@
+embeddings:
+  provider: google.genai
+  model: text-embedding-004
+
+vector_store:
+  type: chroma
+  collection_name: doc_intel_eval
+
+ingest:
+  sources:
+    - path: "/mnt/data/eval_source_document.pdf"   # uploaded asset
+
+chunking:
+  method: llama_sentence_splitter
+  chunk_size: 600
+  chunk_overlap: 150
