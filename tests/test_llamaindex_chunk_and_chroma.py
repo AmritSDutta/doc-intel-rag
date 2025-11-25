@@ -1,9 +1,8 @@
 import os
 from pathlib import Path
 
-import pytest
-import pdfplumber
 import chromadb
+import pdfplumber
 from google import genai
 from llama_index.core.node_parser import SentenceSplitter
 
@@ -33,7 +32,6 @@ def llamaindex_chunk(text: str, chunk_size: int = 600, chunk_overlap: int = 150)
     return [getattr(n, "get_content", lambda: str(n))() for n in nodes]
 
 
-@pytest.mark.slow
 def test_llamaindex_chunking_plus_chroma_search():
     assert os.path.exists(PDF_PATH), f"PDF not found at {PDF_PATH}"
 

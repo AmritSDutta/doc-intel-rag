@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import pdfplumber
 import json
@@ -7,12 +8,15 @@ from llama_index.core.node_parser import SentenceSplitter
 
 # LlamaIndex splitter import local to avoid heavy import unless used
 def chunk_text_llama(text, chunk_size=600, chunk_overlap=150):
+    logging.info(f'chunking text: {text[:10] if text else None} . . ,chunk_size: {chunk_size},overlap: {chunk_overlap}')
+
     splitter = SentenceSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     nodes = splitter.split_text(text)
     return [getattr(n, "get_content", lambda: str(n))() for n in nodes]
 
 
 def extract_text(path: Path) -> str:
+    logging.info(f'extracting text from: {path}')
     txt = ""
     with pdfplumber.open(path) as pdf:
         for p in pdf.pages:

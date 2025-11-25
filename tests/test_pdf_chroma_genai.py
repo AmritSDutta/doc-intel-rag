@@ -1,9 +1,8 @@
 import os
 from pathlib import Path
 
-import pytest
-import pdfplumber
 import chromadb
+import pdfplumber
 from google import genai
 
 PDF_PATH = Path(__file__).parent.joinpath("assets", "eval_source_document.pdf").resolve()
@@ -29,7 +28,6 @@ def get_embedding_model(chunks):
     ).embeddings
 
 
-@pytest.mark.slow
 def test_ingest_embed_chroma_roundtrip():
     # preconditions
 

@@ -8,7 +8,7 @@ vector_store:
 
 ingest:
   sources:
-    - path: "/mnt/data/eval_source_document.pdf"   # uploaded asset
+    - path: "./assets/eval_source_document.pdf"   # uploaded asset
 
 chunking:
   method: llama_sentence_splitter
