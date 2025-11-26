@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class GenAILLMService(LLMService):
-    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = "gemini-2.5-flash-lite"):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = "gemini-2.5-flash"):
         """Long-lived GenAI client for synthesis (Gemini)."""
         self.client = genai.Client(api_key=api_key) if api_key else genai.Client()
         self.model = model
@@ -63,7 +63,8 @@ class GenAILLMService(LLMService):
             model=self.model,
             config=types.GenerateContentConfig(
                 system_instruction=self.system_prompt,
-                safety_settings=self.safety_settings
+                safety_settings=self.safety_settings,
+                max_output_tokens=1024
             )
         )
 
