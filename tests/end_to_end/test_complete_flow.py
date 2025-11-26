@@ -2,9 +2,11 @@ import json
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from config.logging_config import setup_logging
 from ingest.ingest_pdfs import extract_text, chunk_text_llama
-from query.run_query import search_and_synthesize
+from query.run_query import search_and_synthesize, synthesize
 from services.factory import load_config, get_embedding_service, get_vector_store
 
 
@@ -12,7 +14,8 @@ def _project_root() -> Path:
     return Path(__file__).resolve().parent.parent.parent  # root/
 
 
-def test_complete_flow():
+@pytest.mark.asyncio
+async def test_complete_flow():
     setup_logging()
 
     ROOT: Path = _project_root()
@@ -43,5 +46,5 @@ def test_complete_flow():
     store.save(ids, texts, metas, embs)
     print(f"indexed {len(ids)} chunks")
 
-    answer, hits = search_and_synthesize('what are the key concepts?', cfg=cfg)
+    answer, hits = await synthesize('what are the key concepts?', cfg=cfg)
     print(answer)
