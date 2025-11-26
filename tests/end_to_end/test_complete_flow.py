@@ -46,5 +46,5 @@ async def test_complete_flow():
     store.save(ids, texts, metas, embs)
     print(f"indexed {len(ids)} chunks")
 
-    answer, hits = await synthesize('what are the key concepts?', cfg=cfg)
-    print(answer)
+    answer, hits = search_and_synthesize('what are the key concepts?', cfg=cfg)
+    print(f'Answer: {answer}')

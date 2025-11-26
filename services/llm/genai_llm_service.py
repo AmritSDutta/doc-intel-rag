@@ -4,6 +4,7 @@ from typing import Optional
 from google import genai
 from google.genai import types
 from google.genai.chats import Chat
+from google.genai.types import GenerateContentResponse
 from llama_index.core.agent import FunctionAgent
 from llama_index.core.evaluation import FaithfulnessEvaluator
 from llama_index.llms.google_genai import GoogleGenAI
@@ -46,7 +47,7 @@ class GenAILLMService(LLMService):
             "Never hallucinate facts not present in the provided information."
         )
 
-    def _get_response_text(self, agent: Chat, user_prompt: str) -> str:
+    def _get_response_text(self, agent: Chat, user_prompt: str) -> (str, GenerateContentResponse):
         logging.info(f'user query: {user_prompt[:100]}')
         response = agent.send_message(user_prompt)
         synthesis: str = 'not available'
@@ -55,7 +56,7 @@ class GenAILLMService(LLMService):
             logging.info(f'Agent token usage: {response.usage_metadata.total_token_count}')
             synthesis = response.text
 
-        return synthesis
+        return synthesis, response
 
     def _get_synthesizer_agent(self) -> Chat:
         return self.client.chats.create(
@@ -69,13 +70,8 @@ class GenAILLMService(LLMService):
     def synthesize(self, user_prompt: str, max_output_tokens: int = 512) -> str:
         """Synthesize a short answer from a free-form prompt."""
         logger.info(f"synthesizing query: {user_prompt[:50] if user_prompt else 'NA'}")
-        evaluator = FaithfulnessEvaluator(llm=GoogleGenAI(
-            model="gemini-2.5-flash-lite",
-        ))
         agent: Chat = self._get_synthesizer_agent()
-        resp: str = self._get_response_text(agent, user_prompt)
-        eval_result = evaluator.evaluate_response(response=resp)
-        logger.info(f'FaithfulnessEvaluator: {str(eval_result.passing)}')
+        resp, response = self._get_response_text(agent, user_prompt)
         return resp
 
     async def synthesize_agentic(self, user_prompt: str, max_output_tokens: int = 512) -> str:
@@ -92,9 +88,5 @@ class GenAILLMService(LLMService):
             system_prompt=self.system_prompt
         )
         response = await workflow.run(user_msg=user_prompt)
-        if not hasattr(response, "source_nodes"):
-            response.source_nodes = hits  # whatever your retrieval returned
-        eval_result = evaluator.evaluate_response(response=response)
         logger.info(f'FunctionAgent: {response.text}')
-        logger.info(f'FaithfulnessEvaluator: {str(eval_result.passing)}')
         return response.text
