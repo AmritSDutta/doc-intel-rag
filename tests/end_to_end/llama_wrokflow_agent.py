@@ -1,6 +1,7 @@
 import asyncio
 import re
 
+from google.genai.types import GenerateContentConfig
 from llama_index.llms.google_genai import GoogleGenAI
 from workflows import Workflow, step
 from workflows.events import (
@@ -12,13 +13,8 @@ from workflows.events import (
 from llama_index.llms.openai import OpenAI
 from workflows.resource import ResourceManager
 
-PLAYER_TEMPLATE = """
+SYSTEM_PROMPT = """
 You are an autonomous Tic-Tac-Toe agent.
-
-YOUR SYMBOL: {{SYMBOL}}
-BOARD STATE:
-{{BOARD}}
-
 GENERAL RULES:
 1. You play exactly one move per turn.
 2. A move must target a cell that currently contains '.' (empty).
@@ -50,12 +46,27 @@ Return only:
 No other text, punctuation, or formatting.
 """
 
+PLAYER_TEMPLATE = """
+make your move.
+
+YOUR SYMBOL: {{SYMBOL}}
+BOARD STATE:
+{{BOARD}}
+
+OUTPUT FORMAT (STRICT):
+Return only:
+
+    row,col
+
+No other text, punctuation, or formatting.
+"""
+
 
 def _parse_coord(s: str) -> tuple[int, int] | None:
     m = re.search(r"(-?\d+)\s*[, ]\s*(-?\d+)", s)
     if not m:
         return None
-    return (int(m.group(1)), int(m.group(2)))
+    return int(m.group(1)), int(m.group(2))
 
 
 def _valid_move(board, i, j):
@@ -95,12 +106,14 @@ class PlayerTwoEvent(Event):
 
 class TicTacToeFlow(Workflow):
 
-    def __init__(self, timeout: float | None = 45.0, disable_validation: bool = False, verbose: bool = False,
-                 resource_manager: ResourceManager | None = None, num_concurrent_runs: int | None = None) -> None:
-        super().__init__(timeout, disable_validation, verbose, resource_manager, num_concurrent_runs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        self.player1 = OpenAI(model="gpt-5-nano")
-        self.player2 = GoogleGenAI(model="gemini-2.5-flash")
+        self.player1 = OpenAI(model="gpt-4o-mini", system_prompt=SYSTEM_PROMPT)
+        self.player2 = GoogleGenAI(model="gemini-2.5-flash",
+                                   generation_config=GenerateContentConfig(
+                                       system_instruction=SYSTEM_PROMPT)
+                                   )
         self.board: list[list[str]] = [['.' for _ in range(3)] for _ in range(3)]
 
     @step
@@ -130,13 +143,11 @@ class TicTacToeFlow(Workflow):
         return CoordinatorEvent(moves=coord, player='X')
 
     @step
-    async def coordinator_decision(self,
-                                   ev: StartEvent | CoordinatorEvent) -> StopEvent | PlayerOneEvent | PlayerTwoEvent:
+    async def coordinator(self, ev: StartEvent | CoordinatorEvent) -> StopEvent | PlayerOneEvent | PlayerTwoEvent:
         if isinstance(ev, StartEvent):
-            return PlayerOneEvent(player='player1')
+            return PlayerOneEvent(player='player1')  # game starts
 
-        moves, symbol = ev.moves, ev.player
-        i, j = moves
+        (i, j), symbol = ev.moves, ev.player
         if not _valid_move(self.board, i, j):
             return StopEvent(result=f"Invalid move {(i, j)} by {ev.player}")
         self.board[i][j] = ev.player
@@ -163,10 +174,7 @@ class TicTacToeFlow(Workflow):
 
 if __name__ == '__main__':
     async def main():
-        grid = [['.' for _ in range(3)] for _ in range(3)]
-        w = TicTacToeFlow(timeout=360, verbose=False)
-        result = await w.run(board=grid)
+        tic_tac_toe = TicTacToeFlow(timeout=360, verbose=False)
+        result = await tic_tac_toe.run()
         print(result)
-
-
     asyncio.run(main())
